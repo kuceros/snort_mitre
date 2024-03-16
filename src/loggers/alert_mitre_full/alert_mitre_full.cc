@@ -45,6 +45,7 @@
 #include "framework/module.h"
 #include "log/log_text.h"
 #include "log/text_log.h"
+#include "log/messages.h"
 #include "main/snort_config.h"
 #include "packet_io/sfdaq.h"
 #include "protocols/packet.h"
@@ -170,7 +171,7 @@ MitreFullLogger::MitreFullLogger(MitreFullModule* m) : file(m->file ? F_NAME : "
 
     // Check if the file is opened successfully
     if (!map_file.is_open()) {
-        cerr << "file_in" << endl;
+        ErrorMessage("Error opening mapping file");
         return ;
     }
 

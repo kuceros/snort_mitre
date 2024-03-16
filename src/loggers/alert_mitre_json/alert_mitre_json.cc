@@ -45,6 +45,7 @@
 #include "log/log.h"
 #include "log/log_text.h"
 #include "log/text_log.h"
+#include "log/messages.h"
 #include "packet_io/active.h"
 #include "packet_io/sfdaq.h"
 #include "protocols/cisco_meta_data.h"
@@ -1024,7 +1025,7 @@ MitreJsonLogger::MitreJsonLogger(MitreJsonModule* m) : file(m->file ? F_NAME : "
 
     // Check if the file is opened successfully
     if (!map_file.is_open()) {
-        cerr << "error file_in" << endl;
+        ErrorMessage("Error opening mapping file");
         return ;
     }
 
