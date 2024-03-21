@@ -67,11 +67,6 @@ static THREAD_LOCAL TextLog* csv_log;
 #define F_NAME S_NAME ".txt"
 
 struct Mitre{
-    string proto;
-    string source;
-    string src_port;
-    string destination;
-    string dst_port;
     string classtype;
     string direction;
     string TActic;
@@ -799,11 +794,6 @@ MitreCsvLogger::MitreCsvLogger(MitreCsvModule* m) :
             getline(ss, msg, ',') && getline(ss, reference, '\n')){
             // Store the parsed data into the map
             Mitre mitre_data;
-            mitre_data.proto = proto;
-            mitre_data.source = source;
-            mitre_data.src_port = src_port;
-            mitre_data.destination = destination;
-            mitre_data.dst_port = dst_port;
             mitre_data.classtype = classtype;
             mitre_data.direction = direction;
             mitre_data.TActic = TActic;
