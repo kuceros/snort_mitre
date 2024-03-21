@@ -1,4 +1,4 @@
-# RULE-MITRE output SNORT 3 loggers
+# RULE-MITRE SNORT 3 loggers
 
 This repository contains 3 additional Snort 3 output modules for rule-MITRE mapping. Each module reads CSV rule-mitre mapping file and integrate these mappings to Snort detection output.
 
