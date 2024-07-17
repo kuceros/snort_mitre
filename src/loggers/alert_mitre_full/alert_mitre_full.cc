@@ -185,13 +185,30 @@ MitreFullLogger::MitreFullLogger(MitreFullModule* m) : file(m->file ? F_NAME : "
         char comma;
 
         
-        if (getline(ss, sid, ',') && getline(ss, proto, ',') && getline(ss, source, ',') &&  
-            getline(ss, src_port, ',') && getline(ss, arrow, ',') && getline(ss, destination, ',') &&
-            getline(ss, dst_port, ',') && getline(ss, classtype, ',') && getline(ss, direction, ',') &&
-            getline(ss, TActic, ',') && getline(ss, Technique, ',') && getline(ss, Tname, ',') &&
-            getline(ss, TA_inb, ',') && getline(ss, T_inb, ',') && getline(ss, TA_lat, ',') &&
-            getline(ss, T_lat, ',') && getline(ss, TA_out, ',') && getline(ss, T_out, ',') &&
-            getline(ss, msg, ',') && getline(ss, reference)){
+        if (std::getline(ss, sid, ',') && 
+            std::getline(ss, proto, ',') && 
+            std::getline(ss, source, ',') &&  
+            std::getline(ss, src_port, ',') && 
+            std::getline(ss, arrow, ',') && 
+            std::getline(ss, destination, ',') && 
+            std::getline(ss, dst_port, ',') && 
+            std::getline(ss, classtype, ',') && 
+            std::getline(ss, direction, ',') && 
+            std::getline(ss, TActic, ',') && 
+            std::getline(ss, Technique, ',') && 
+            std::getline(ss, Tname, ',') && 
+            std::getline(ss, TA_inb, ',') && 
+            std::getline(ss, T_inb, ',') && 
+            std::getline(ss, TA_lat, ',') && 
+            std::getline(ss, T_lat, ',') && 
+            std::getline(ss, TA_out, ',') && 
+            std::getline(ss, T_out, ',') && 
+            std::getline(ss, msg, ',')) { 
+
+            if (std::getline(ss, reference, '\n')) {
+            } else {
+                reference = ""; 
+            }
             // Store the parsed data into the map
             Mitre mitre_data;
             mitre_data.classtype = classtype;
