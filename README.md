@@ -19,13 +19,3 @@ And modify 'snort.lua' configuration file. Examples:
       fields = "timestamp pkt_num proto pkt_gen pkt_len dir src_ap dst_ap rule action classtype direction TActic Technique Tname TA_inb T_inb TA_lat T_lat TA_out T_out msg reference"
     }
     
-    alert_mitre_csv = { 
-      file = true,
-      mapping = "<your_path>/rules_parsed.csv",
-      fields = "timestamp pkt_num proto pkt_gen pkt_len dir src_ap dst_ap rule action classtype direction TActic Technique Tname TA_inb T_inb TA_lat T_lat TA_out T_out msg reference"
-    }
-
-    alert_mitre_full = { 
-      file = true,
-      mapping = "<your_path>/rules_parsed.csv"
-    }
