@@ -36,13 +36,11 @@
 #include <fstream>
 
 #include "detection/detection_engine.h"
-#include "detection/signature.h"
 #include "events/event.h"
 #include "flow/flow_key.h"
 #include "framework/logger.h"
 #include "framework/module.h"
 #include "helpers/base64_encoder.h"
-#include "log/log.h"
 #include "log/log_text.h"
 #include "log/text_log.h"
 #include "log/messages.h"
@@ -54,7 +52,7 @@
 #include "protocols/tcp.h"
 #include "protocols/udp.h"
 #include "protocols/vlan.h"
-#include "utils/stats.h"
+#include "utils/util.h"
 
 using namespace snort;
 using namespace std;
@@ -95,6 +93,28 @@ struct Args
     bool comma;
 };
 
+void LogTime(TextLog* log, Packet* p)
+{
+    char timebuf[TIMEBUF_SIZE];
+    ts_print((const struct timeval*)&p->pkth->ts, timebuf, true);
+    
+    const char* originalTimestamp = timebuf;
+    char formattedTimestamp[50];
+
+    // Převod původního časového řetězce na strukturu tm
+    std::tm tm_time = {};
+    std::istringstream ss(originalTimestamp);
+    ss >> std::get_time(&tm_time, "%Y-%m-%d %H:%M:%S");
+
+    // Přeformátování na nový formát
+    std::ostringstream formattedTime;
+    formattedTime << std::put_time(&tm_time, "%Y-%m-%dT%H:%M:%S.") << "000+0000"; // Přidání milisekund a UTC offsetu
+
+    // Zkopírování zpět do char bufferu
+    std::strcpy(formattedTimestamp, formattedTime.str().c_str());
+    TextLog_Puts(log, formattedTimestamp);
+}
+
 static void print_label(const Args& a, const char* label)
 {
     if ( a.comma )
@@ -112,10 +132,8 @@ static bool ff_action(const Args& a)
 
 static bool ff_class(const Args& a)
 {
-    const char* cls = "none";
-
-    if ( a.event.sig_info->class_type and !a.event.sig_info->class_type->text.empty() )
-        cls = a.event.sig_info->class_type->text.c_str();
+    const char* cls = a.event.get_class_type();
+    if ( !cls ) cls = "none";
 
     print_label(a, "class");
     TextLog_Quote(json_log, cls);
@@ -304,7 +322,7 @@ static bool ff_geneve_vni(const Args& a)
 static bool ff_gid(const Args& a)
 {
     print_label(a, "gid");
-    TextLog_Print(json_log, "%u",  a.event.sig_info->gid);
+    TextLog_Print(json_log, "%u",  a.event.get_gid());
     return true;
 }
 
@@ -435,7 +453,7 @@ static bool ff_pkt_num(const Args& a)
 static bool ff_priority(const Args& a)
 {
     print_label(a, "priority");
-    TextLog_Print(json_log, "%u", a.event.sig_info->priority);
+    TextLog_Print(json_log, "%u", a.event.get_priority());
     return true;
 }
 
@@ -449,7 +467,7 @@ static bool ff_proto(const Args& a)
 static bool ff_rev(const Args& a)
 {
     print_label(a, "rev");
-    TextLog_Print(json_log, "%u",  a.event.sig_info->rev);
+    TextLog_Print(json_log, "%u",  a.event.get_rev());
     return true;
 }
 
@@ -457,9 +475,10 @@ static bool ff_rule(const Args& a)
 {
     print_label(a, "rule");
 
-    TextLog_Print(json_log, "\"%u:%u:%u\"",
-        a.event.sig_info->gid, a.event.sig_info->sid, a.event.sig_info->rev);
+    uint32_t gid, sid, rev;
+    a.event.get_sig_ids(gid, sid, rev);
 
+    TextLog_Print(json_log, "\"%u:%u:%u\"", gid, sid, rev);
     return true;
 }
 
@@ -519,7 +538,7 @@ static bool ff_sgt(const Args& a)
 static bool ff_sid(const Args& a)
 {
     print_label(a, "sid");
-    TextLog_Print(json_log, "%u",  a.event.sig_info->sid);
+    TextLog_Print(json_log, "%u",  a.event.get_sid());
     return true;
 }
 
@@ -565,15 +584,16 @@ static bool ff_src_port(const Args& a)
 static bool ff_target(const Args& a)
 {
     SfIpString addr = "";
+    bool src;
 
-    if ( a.event.sig_info->target == TARGET_SRC )
+    if ( !a.event.get_target(src) )
+        return false;
+
+    if ( src )
         a.pkt->ptrs.ip_api.get_src()->ntop(addr);
 
-    else if ( a.event.sig_info->target == TARGET_DST )
-        a.pkt->ptrs.ip_api.get_dst()->ntop(addr);
-
     else
-        return false;
+        a.pkt->ptrs.ip_api.get_dst()->ntop(addr);
 
     print_label(a, "target");
     TextLog_Quote(json_log, addr);
@@ -596,7 +616,7 @@ static bool ff_tcp_flags(const Args& a)
     if (a.pkt->ptrs.tcph )
     {
         char tcpFlags[9];
-        CreateTCPFlagString(a.pkt->ptrs.tcph, tcpFlags);
+        a.pkt->ptrs.tcph->stringify_flags(tcpFlags);
 
         print_label(a, "tcp_flags");
         TextLog_Quote(json_log, tcpFlags);
@@ -642,7 +662,7 @@ static bool ff_timestamp(const Args& a)
 {
     print_label(a, "timestamp");
     TextLog_Putc(json_log, '"');
-    LogTimeStamp(json_log, a.pkt);
+    LogTime(json_log, a.pkt);
     TextLog_Putc(json_log, '"');
     return true;
 }
@@ -689,7 +709,7 @@ static bool ff_vlan(const Args& a)
 
 static bool ff_classtype(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.classtype != "")
@@ -703,13 +723,13 @@ static bool ff_classtype(const Args& a)
 
 static bool ff_direction(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.direction != "")
         {
             print_label(a, "direction");
-            TextLog_Print(json_log, "%s", it->second.direction.c_str());
+            TextLog_Print(json_log, "\"%s\"", it->second.direction.c_str());
         }
     }
     return true;
@@ -717,7 +737,7 @@ static bool ff_direction(const Args& a)
 
 static bool ff_tactic(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if (it->second.TActic != "")
@@ -732,7 +752,7 @@ static bool ff_tactic(const Args& a)
 
 static bool ff_technique(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.Technique != "")
@@ -747,7 +767,7 @@ static bool ff_technique(const Args& a)
 
 static bool ff_tname(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if (it->second.Tname != "")
@@ -762,7 +782,7 @@ static bool ff_tname(const Args& a)
 
 static bool ff_ta_inb(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if (it->second.TA_inb != "")
@@ -776,7 +796,7 @@ static bool ff_ta_inb(const Args& a)
 
 static bool ff_t_inb(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.T_inb != "")
@@ -790,7 +810,7 @@ static bool ff_t_inb(const Args& a)
 
 static bool ff_ta_lat(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.TA_lat != "")
@@ -804,7 +824,7 @@ static bool ff_ta_lat(const Args& a)
 
 static bool ff_t_lat(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.T_lat != "")
@@ -818,7 +838,7 @@ static bool ff_t_lat(const Args& a)
 
 static bool ff_ta_out(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.TA_out != "")
@@ -832,7 +852,7 @@ static bool ff_ta_out(const Args& a)
 
 static bool ff_t_out(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.T_out != "")
@@ -846,7 +866,7 @@ static bool ff_t_out(const Args& a)
 
 static bool ff_reference(const Args& a)
 {
-    auto it = a.rules_map.find(a.event.sig_info->sid);
+    auto it = a.rules_map.find(a.event.get_sid());
     if(it != a.rules_map.end())
     {
         if(it->second.reference != "")
