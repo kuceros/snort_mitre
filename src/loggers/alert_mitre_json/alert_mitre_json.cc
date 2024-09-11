@@ -34,6 +34,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 #include "detection/detection_engine.h"
 #include "events/event.h"

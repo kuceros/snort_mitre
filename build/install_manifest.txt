@@ -1,0 +1,1 @@
+/usr/local/snort/lib/snort/plugins/extra/loggers/alert_mitre_json.so
