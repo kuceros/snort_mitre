@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/Users/kucera.rosta/desktop/snort3_extra/build/src/loggers/alert_mitre_json",
-  "command": "/Library/Developer/CommandLineTools/usr/bin/c++ -Dalert_mitre_json_EXPORTS -I/usr/local/Cellar/snort/3.3.4.0/include/snort    -I/usr/local/include  -I/usr/local/Cellar/luajit/2.1.1724512491/include/luajit-2.1  -I/usr/local/include        -I/usr/local/include  -I/usr/local/opt/libpcap/include  -I/usr/local/include  -I/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk/usr/include/uuid     -DNDEBUG -g -ggdb   -O2 -g -DNDEBUG -std=c++14 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -fPIC -o CMakeFiles/alert_mitre_json.dir/alert_mitre_json.cc.o -c /Users/kucera.rosta/desktop/snort3_extra/src/loggers/alert_mitre_json/alert_mitre_json.cc",
-  "file": "/Users/kucera.rosta/desktop/snort3_extra/src/loggers/alert_mitre_json/alert_mitre_json.cc",
-  "output": "src/loggers/alert_mitre_json/CMakeFiles/alert_mitre_json.dir/alert_mitre_json.cc.o"
-}
-]
